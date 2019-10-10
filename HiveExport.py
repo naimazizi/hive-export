@@ -54,21 +54,18 @@ class SparkSingleton:
 
     @staticmethod
     def create_spark_session() -> None:
-        try:
-            SparkSingleton.__instance = SparkSession.builder \
-                .appName(SPARK_SESSION_NAME) \
-                .config('spark.dynamicAllocation.enabled', SPARK_DYNAMIC_ALLOCATION_ENABLED) \
-                .config('spark.executor.instances', SPARK_EXECUTOR_INSTANCES) \
-                .config('spark.executor.cores', SPARK_EXECUTOR_CORES) \
-                .config('spark.executor.memory', SPARK_EXECUTOR_MEMORY) \
-                .config('spark.executor.memoryOverhead', SPARK_EXECUTOR_MEMORYOVERHEAD) \
-                .enableHiveSupport() \
-                .getOrCreate()
-            SparkSingleton.__tempTime = datetime.utcnow()
-            logging.info('{} - Created Spark Session'.format(SPARK_SESSION_NAME))
-        except Exception as e:
-            logging.error('Failed to create Spark Session',exc_info=True)
-        
+        SparkSingleton.__instance = SparkSession.builder \
+            .appName(SPARK_SESSION_NAME) \
+            .config('spark.dynamicAllocation.enabled', SPARK_DYNAMIC_ALLOCATION_ENABLED) \
+            .config('spark.executor.instances', SPARK_EXECUTOR_INSTANCES) \
+            .config('spark.executor.cores', SPARK_EXECUTOR_CORES) \
+            .config('spark.executor.memory', SPARK_EXECUTOR_MEMORY) \
+            .config('spark.executor.memoryOverhead', SPARK_EXECUTOR_MEMORYOVERHEAD) \
+            .enableHiveSupport() \
+            .getOrCreate()
+        SparkSingleton.__tempTime = datetime.utcnow()
+        logging.info('{} - Created Spark Session'.format(SPARK_SESSION_NAME))
+
     @staticmethod
     def stop_spark_session() -> None:
         SparkSingleton.__instance.stop()
@@ -130,11 +127,13 @@ class CreateTempTable(luigi.Task):
                     self.spark.sql("DROP TABLE IF EXISTS {}".format(lines[0]))
                     create_query = 'CREATE TABLE {} ROW FORMAT DELIMITED FIELDS TERMINATED BY "\t" LINES TERMINATED BY "\n" STORED AS TEXTFILE AS {} '.format(lines[0],lines[2])
                     self.spark.sql(create_query)
+                    num_row = self.spark.sql("SELECT COUNT(1) as count FROM {}".format(lines[0])).collect()[0]['count']
                     logging.info('Created Table "{}" with Query "{}"'.format(lines[0],lines[2]))
-                    output.write('{}\t{}\tCREATED\n'.format(lines[0],lines[1]))
+                    output.write('{}\t{}\t{}\tCREATED\n'.format(lines[0],lines[1],num_row))
                 except Exception as e:
-                    logging.error('Failed to create table "{}" with Query "{}"\n'.format(lines[0],lines[2]),exc_info=True)
-        
+                    logging.error('Failed to create table "{}" with Query "{}"'.format(lines[0],lines[2]),exc_info=True)
+                    raise Exception('Failed to create table "{}" with Query "{}"'.format(lines[0],lines[2]))
+
         SparkSingleton.stop_spark_session();
 
 '''
@@ -179,3 +178,4 @@ class InsertToDatabase(luigi.Task):
                     logging.info("Insert data into table {} is completed".find(table))
                 except Exception as identifier:
                     logging.error("Error in inserting data to table {}".format(table),exc_info=True)
+                    raise Exception("Error in inserting data to table {}".format(table))
