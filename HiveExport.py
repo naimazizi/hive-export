@@ -39,22 +39,20 @@ logging.basicConfig(format='%(asctime)s %(levelname)s %(message)s',
 
 today = date.today().strftime(DATE_FORMAT)
 
-class SparkSingleton:
-    __instance = None
+class Spark:
+    __spark = None
     __tempTime = None
     
-    @staticmethod 
-    def getInstance()->SparkSession:
-        if SparkSingleton.__instance == None:
-            SparkSingleton()
-        return SparkSingleton.__instance
+    def get_session(self):
+        if(self.__spark is None):
+            self.create_spark_session()
+        return self.__spark
 
     def __init__(self):
         self.create_spark_session()
 
-    @staticmethod
-    def create_spark_session() -> None:
-        SparkSingleton.__instance = SparkSession.builder \
+    def create_spark_session(self) -> None:
+        self.__spark = SparkSession.builder \
             .appName(SPARK_SESSION_NAME) \
             .config('spark.dynamicAllocation.enabled', SPARK_DYNAMIC_ALLOCATION_ENABLED) \
             .config('spark.executor.instances', SPARK_EXECUTOR_INSTANCES) \
@@ -63,15 +61,14 @@ class SparkSingleton:
             .config('spark.executor.memoryOverhead', SPARK_EXECUTOR_MEMORYOVERHEAD) \
             .enableHiveSupport() \
             .getOrCreate()
-        SparkSingleton.__tempTime = datetime.utcnow()
+        self.__tempTime = datetime.utcnow()
         logging.info('{} - Created Spark Session'.format(SPARK_SESSION_NAME))
 
-    @staticmethod
-    def stop_spark_session() -> None:
-        SparkSingleton.__instance.stop()
-        SparkSingleton.__instance = None
+    def stop_spark_session(self) -> None:
+        self.__spark.stop()
+        self.__spark = None
         logging.info('{} - Stopped Spark Session, time elapsed: {}'.format(
-            SPARK_SESSION_NAME, (datetime.utcnow()-SparkSingleton.__tempTime).total_seconds()))
+            SPARK_SESSION_NAME, (datetime.utcnow()-self.__tempTime).total_seconds()))
       
 
 '''
@@ -107,8 +104,6 @@ Second Task - Create temporary table to save the result of query, since sqoop ca
 
 class CreateTempTable(luigi.Task):
     path = luigi.Parameter()
-    spark = None
-    __tempTime = None
 
     def requires(self) -> None:
         return [ReadListQuery(self.path)]
@@ -118,23 +113,24 @@ class CreateTempTable(luigi.Task):
 
 
     def run(self) -> None:
-        self.spark = SparkSingleton.getInstance()
+        sparkSession = Spark()
+        spark = sparkSession.get_session()
 
         with self.input()[0].open() as input, self.output().open('w') as output:
             for line in input:
                 try:
                     lines = line.split("\t")
-                    self.spark.sql("DROP TABLE IF EXISTS {}".format(lines[0]))
+                    spark.sql("DROP TABLE IF EXISTS {}".format(lines[0]))
                     create_query = 'CREATE TABLE {} ROW FORMAT DELIMITED FIELDS TERMINATED BY "\t" LINES TERMINATED BY "\n" STORED AS TEXTFILE AS {} '.format(lines[0],lines[2])
-                    self.spark.sql(create_query)
-                    num_row = self.spark.sql("SELECT COUNT(1) as count FROM {}".format(lines[0])).collect()[0]['count']
+                    spark.sql(create_query)
+                    num_row = spark.sql("SELECT COUNT(1) as count FROM {}".format(lines[0])).collect()[0]['count']
                     logging.info('Created Table "{}" with Query "{}"'.format(lines[0],lines[2]))
                     output.write('{}\t{}\t{}\tCREATED\n'.format(lines[0],lines[1],num_row))
                 except Exception as e:
                     logging.error('Failed to create table "{}" with Query "{}"'.format(lines[0],lines[2]),exc_info=True)
                     raise Exception('Failed to create table "{}" with Query "{}"'.format(lines[0],lines[2]))
 
-        SparkSingleton.stop_spark_session();
+        sparkSession.stop_spark_session();
 
 '''
 Third Task - Insert data from hive table into database using sqoop
