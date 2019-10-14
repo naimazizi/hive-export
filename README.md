@@ -1,7 +1,7 @@
 # HIVE-Export
 
 ## Introduction
-Combination between Apache Spark and Sqoop to extract data from Hive table into relational database (MySQL in this source code, but can use another rdbms as long as [supported](http://sqoop.apache.org/docs/1.4.0-incubating/SqoopUserGuide.html#id1773570) by hive), integrated with pipeline using luigi.
+Combination between Apache Spark and Sqoop to extract data from Hive table into relational database (MySQL in this source code, but another rdbms can be used as long as [supported](http://sqoop.apache.org/docs/1.4.0-incubating/SqoopUserGuide.html#id1773570) by sqoop), integrated with pipeline using luigi.
 
 ## Getting Started
 
@@ -10,22 +10,34 @@ Combination between Apache Spark and Sqoop to extract data from Hive table into 
     | table_name | columns        | query                               |
     |------------|----------------|-------------------------------------|
     | table1     | col1,col2,col3 | SELECT * FROM table1                |
-    | tabl2      | col1,col2      | SELECT * FROM table2 WHERE col1 > 1 |
+    | tabl2      | col1,col2      | SELECT * FROM table2 WHERE col1 > 1
+    
+2. Add path to environment variable
+   
+   
+   `export PYTHONPATH=$SPARK_HOME/python/:$PYTHONPATH`
+   
+   `export PYTHONPATH=$SPARK_HOME/python/lib/py4j-0.10.6-src.zip:$PYTHONPATH`
+   
+   `export PYTHONPATH=/vagrant/hive-export/:$PYTHONPATH`
+   
+   `export LUIGI_CONFIG_PATH=/vagrant/hive-export/luigi.cfg`
 
-2. Create log for luigi central scheduler
+3. Create log for luigi central scheduler
 
-    `mkdir /tmp/luigid`    
+    `mkdir /tmp/luigid`
+
     `touch /tmp/luigid/luigi-server.log`
 
-3. Start luigi central scheduler
+4. Start luigi central scheduler
 
     `luigid --logdir=/tmp/luigid`
 
     Luigi central scheduler can be accessed at [http://localhost:8082](http://localhost:8082)
 
-4. Run the following command on terminal 
+5. Run the following command on terminal 
 
-    `luigi --module HiveExport InsertToDatabase --local-scheduler --path query.tsv` 
+    `luigi --module HiveExport InsertToDatabase --path query.tsv` 
 
     **Need to add current module to PYTHONPATH**
 
@@ -36,7 +48,7 @@ If you don't have any access to hadoop environment that integrated with spark an
 ## Troubleshooting
 * **key not found: _PYSPARK_DRIVER_CALLBACK_HOST**
 
-    Add following path to PYTHONPATH (append `~/.bashrc`). Replace py4j version that match your Apache spark (py4j is already bundled in Apache spark installation folder).
+    Edit the following path in PYTHONPATH (located in `~/.bashrc`) then replace py4j version that match your Apache spark (py4j is already bundled in Apache spark installation folder).
 
         export PYTHONPATH=$SPARK_HOME/python/:$PYTHONPATH
         export PYTHONPATH=$SPARK_HOME/python/lib/py4j-0.10.6-src.zip:$PYTHONPATH

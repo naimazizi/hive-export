@@ -109,3 +109,7 @@ test.py
 logs
 *.java
 test*.py
+*.tar.gz
+/luigid
+*.pickle
+*.db
