@@ -5,9 +5,17 @@ Combination between Apache Spark and Sqoop to extract data from Hive table into 
 
 ## Getting Started
 
-1. Insert all table, columns and query that will be exported from Hive. List of queries and tables can be found in *query.tsv*, separated by tab (`\t`)
+1. Insert all table, anchor columns and query that will be exported from Hive. 
+   
+   In relational database (sink), table with same name and columns needs to be created first. Need to define primary key or unique key as well.
+   
+   List of queries and tables can be found in *query.tsv*, separated by tab (`\t`). 
+   
+   Upon inserting row to specific table, anchor columns will be checked whether its already exists or not. Row with matching anchor column will be updated, otherwise it will insert new row. This behaviour is defined in `luigi.cfg` on variable `SQOOP_UPDATE_MODE` (either `allowinsert` or `updateonly`).
+   
+   Table with no anchor column can be defined by using dash sign(`-`). Multiple columns use comma (`,`) as separator. 
 
-    | table_name | columns        | query                               |
+    | table_name | anchor_columns        | query                               |
     |------------|----------------|-------------------------------------|
     | table1     | col1,col2,col3 | SELECT * FROM table1                |
     | tabl2      | col1,col2      | SELECT * FROM table2 WHERE col1 > 1

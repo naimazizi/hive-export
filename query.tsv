@@ -1,1 +1,1 @@
-test_employee	eid,name,salary,destination	SELECT * FROM employee
+test_employee	eid	SELECT * FROM employee

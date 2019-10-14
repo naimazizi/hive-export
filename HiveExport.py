@@ -185,7 +185,8 @@ class InsertToDatabase(luigi.Task):
                     sqoop_arglist.extend(self.arglist)
                     sqoop_arglist.extend(['--export-dir','{}/{}'.format(SQOOP_EXPORT_DIR,table)])
                     sqoop_arglist.extend(['--table',table])
-                    sqoop_arglist.extend(['--columns','"{}"'.format(columns)])
+                    if(columns != '-'):
+                        sqoop_arglist.extend(['--update-key','"{}"'.format(columns)])
 
                     logging.info("Start inserting data to table {}".format(table))
                     luigi.contrib.hadoop.run_and_track_hadoop_job(arglist=sqoop_arglist)
