@@ -8,7 +8,7 @@ mkl-service==2.3.0
 numpy==1.16.5
 pandas==0.25.1
 py4j==0.10.7
-pyspark==2.4.4
+pyspark==3.2.2
 python-daemon==2.1.2
 python-dateutil==2.8.0
 pytz==2019.2
